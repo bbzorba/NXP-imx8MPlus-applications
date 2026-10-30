@@ -1,0 +1,2 @@
+# Files are built and run on Linux (WSL, the board): keep LF on Windows too
+* text=auto eol=lf
