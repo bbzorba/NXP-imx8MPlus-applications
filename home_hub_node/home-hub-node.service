@@ -1,0 +1,14 @@
+[Unit]
+Description=Home Hub client node (sends board sensors to the ESP32-C6 hub)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/opt/home-hub/home_hub_node
+# Override the hub address here if the name does not resolve:
+# Environment=HUB_HOST=192.168.178.172
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
