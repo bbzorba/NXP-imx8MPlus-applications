@@ -1,49 +1,53 @@
-# home_hub_node
+# home_hub_node – developer manual
 
 Client node for the ESP32-C6 Home Hub
 ([ESP32C6-Zephyr-IoT-Projects](https://github.com/bbzorba/ESP32C6-Zephyr-IoT-Projects),
-`applications/web_app`). Runs on the i.MX 8M Plus under Linux and, every
-10 s, POSTs the board's readings to `http://home-hub/api/node`. The hub
-shows them as a card on its dashboard and marks the node offline after
-30 s without a report.
+`applications/web_app`). Runs on the i.MX 8M Plus under Linux and POSTs
+the board's readings to `http://home-hub/api/node` every 10 s.
 
-## What it sends
-
-| Name | Source |
+| Document | Content |
 |---|---|
-| CPU temperature, SoC temperature | `/sys/class/thermal/thermal_zone*` |
-| `<hwmon> V`, `<hwmon> A` | `/sys/class/hwmon/*/in0_input`, `curr1_input` (only when non-zero) |
-| CPU load | `/proc/stat`, since the previous report |
-| CPU frequency | average of `scaling_cur_freq` over all cores |
-| Load average (1 min), Memory used, Disk used (/), Uptime | `/proc`, `statvfs` |
+| this README | build, deploy, configure, test |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | where it runs, main loop, data sources |
 
-Payload (the hub keeps up to 16 sensors per node, names up to 23 bytes):
+## 1. Build and deploy
+
+From WSL, in this folder (toolchain: see the [top-level README](../README.md)):
+
+```bash
+make                                    # cross-compile into build/
+make deploy                             # copy to /opt/home-hub/, install + restart the service
+make deploy BOARD=root@<ip>             # other board address
+```
+
+After flashing a new Yocto image, run `make deploy` again (the image
+wipes `/opt/home-hub`).
+
+## 2. Configuration
+
+Environment variables, set in `home-hub-node.service`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `HUB_HOST` | `home-hub` (resolved by the router) | hub name or IP |
+| `HUB_PORT` | `80` | hub HTTP port |
+
+## 3. Testing
+
+| Test | How | Expected |
+|---|---|---|
+| Running | `ssh root@<board> systemctl status home-hub-node` | `active (running)` |
+| Reports arrive | open the hub's dashboard | an `imx8mpevk` card, values change every 10 s |
+| Hub down | unplug the hub; `journalctl -u home-hub-node -f` | `Hub not reachable, stopping until it is back` |
+| Hub back | plug the hub in again | `Hub reachable again, resuming` within 60 s |
+| Autostart | `reboot` the board without logging in | card back online after boot |
+
+## 4. Report format
 
 ```json
 {"id":"imx8mpevk","model":"NXP FRDM-IMX8MPLUS",
  "sensors":[{"name":"CPU temperature","value":46.00,"unit":"°C"}]}
 ```
 
-## Hub unavailable
-
-Each report is one TCP connection. If it fails, the node stops sending and
-only tries a TCP connect every 60 s; when that works it resumes. Nothing is
-buffered while the hub is away.
-
-## Build, deploy, autostart
-
-```bash
-make            # cross-compile (see the top-level README for the toolchain)
-make deploy     # copies build/home_hub_node to /opt/home-hub/ and installs the service
-```
-
-It starts at boot through `home-hub-node.service` (systemd), not `.bashrc`:
-`.bashrc` only runs when someone logs in to a shell, so after a reboot
-without a login nothing would be sent. Logs: `journalctl -u home-hub-node`.
-
-`HUB_HOST` (default `home-hub`, resolved by the router) and `HUB_PORT`
-(default 80) can be set in the service file.
-
-Because a rebuilt Yocto image wipes `/opt/home-hub`, run `make deploy`
-again after flashing a new image, or add a recipe to your layer that
-installs the binary and the service.
+At most 16 sensors, names ≤ 23 bytes, units ≤ 7 bytes (the hub's limits);
+raw UTF-8, no `\uXXXX` escapes.

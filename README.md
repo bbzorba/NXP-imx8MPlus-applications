@@ -7,9 +7,9 @@ rebuilt and anything installed on it by hand is wiped.
 
 | Folder | What it is |
 |---|---|
-| [home_hub_node](home_hub_node) | Sends the board's temperatures and system metrics to the ESP32-C6 Home Hub every 10 s |
+| [home_hub_node](home_hub_node) | Sends the board's temperatures and system metrics to the ESP32-C6 Home Hub every 10 s ([architecture](home_hub_node/ARCHITECTURE.md)) |
 
-## Toolchain (Windows host, WSL)
+## 1. Toolchain (Windows host, WSL)
 
 The board runs glibc 2.43 on aarch64. Anything older works too, so Ubuntu's
 cross-compiler in WSL is enough for applications:
@@ -24,7 +24,7 @@ For an exact match with the image, build the image's SDK instead
 `environment-setup-armv8a-poky-linux` script before building and pass
 `CC="$CC"` to make.
 
-## Build and deploy
+## 2. Build and deploy
 
 From WSL, in an application folder:
 
@@ -37,7 +37,7 @@ make deploy           # scp to the board, install and (re)start the systemd serv
 `make deploy BOARD=root@<ip>`. The board's root user has no password, so
 `ssh`/`scp` need no key setup.
 
-## Board notes
+## 3. Board notes
 
 - **Model:** `NXP FRDM-IMX8MPLUS` (the hostname is `imx8mpevk`).
 - **Sensors the kernel exposes:** two die temperatures (`cpu-thermal`,
